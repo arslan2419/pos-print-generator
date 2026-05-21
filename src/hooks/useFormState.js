@@ -36,6 +36,8 @@ function createInitialForm() {
     productType: 'Petrol',
     volume: '',
     vehicleNumber: '',
+    nozzleNo: '',
+    customerName: '',
     logoDataUrl: persisted?.logoDataUrl ?? null,
   };
 }

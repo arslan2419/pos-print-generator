@@ -136,6 +136,15 @@ export default function FuelReceiptForm() {
               placeholder="Enter invoice number"
             />
           </div>
+          <div className="mt-4">
+            <InputField
+              label="Nozzle No"
+              id="nozzleNo"
+              value={form.nozzleNo}
+              onChange={(e) => updateField('nozzleNo', e.target.value)}
+              placeholder="Enter nozzle number"
+            />
+          </div>
         </FormSection>
 
         <FormSection
@@ -215,6 +224,15 @@ export default function FuelReceiptForm() {
               placeholder="Enter vehicle registration number"
               error={errors.vehicleNumber}
               required
+            />
+          </div>
+          <div className="mt-4">
+            <InputField
+              label="Customer Name"
+              id="customerName"
+              value={form.customerName}
+              onChange={(e) => updateField('customerName', e.target.value)}
+              placeholder="Enter customer name"
             />
           </div>
         </FormSection>

@@ -81,13 +81,13 @@ function measureReceiptHeight(formData, measureDoc) {
   y += 2;
   y += 5; // FUEL RECEIPT
   y += 4; // dash
-  y += 5 * (formatPaymentMethod(formData.paymentMethod) ? 4 : 3); // receipt no, date, time, payment
+  y += 5 * (formatPaymentMethod(formData.paymentMethod) ? 5 : 4); // receipt no, date, time, payment, nozzle
   y += 4;
   y += 5 * 3; // product, volume, rate
   y += 4;
   y += 6; // total amount
   y += 4;
-  y += 5; // vehicle no
+  y += 5 * 2; // vehicle no, customer name
   y += 4;
   y += 6; // gap before footer
   y += 4 * 3; // footer lines
@@ -179,6 +179,7 @@ export function generatePDF(formData, totalAmount) {
   if (paymentLabel) {
     y = drawLabelValue(doc, y, 'PAYMENT:', paymentLabel, 9);
   }
+  y = drawLabelValue(doc, y, 'NOZZLE NO:', formData.nozzleNo, 9);
 
   drawDashedLine(doc, y, contentWidth);
   y += 4;
@@ -203,6 +204,7 @@ export function generatePDF(formData, totalAmount) {
   y += 4;
 
   y = drawLabelValue(doc, y, 'VEHICLE NO:', formData.vehicleNumber, 9);
+  y = drawLabelValue(doc, y, 'CUSTOMER NAME:', formData.customerName, 9);
 
   drawDashedLine(doc, y, contentWidth);
   y += 6;
@@ -212,7 +214,7 @@ export function generatePDF(formData, totalAmount) {
   [
     'POWERED BY TRISON',
     'THANKS FOR FUELLING WITH US',
-    'VISIT AGAIN',
+    'VISIT AGAIN - 0303376453937',
   ].forEach((line) => {
     doc.text(line, PAGE_WIDTH / 2, y, { align: 'center' });
     y += 4;
