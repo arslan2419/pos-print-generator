@@ -8,7 +8,7 @@ export default function PrinterSetupGuide() {
     <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium text-gray-700">
-          Receipt paper: 80mm (SpeedX 400)
+          Receipt: 58mm paper / POS58 driver (48mm print)
         </span>
         <button
           type="button"
@@ -26,14 +26,13 @@ export default function PrinterSetupGuide() {
       {showTip && (
         <div className="mt-3 p-3 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg leading-relaxed">
           <p className="font-semibold text-gray-700 mb-1">
-            Printer Setup — SpeedX 400 (80mm)
+            Printer Setup — SpeedX 400 / POS58ENG
           </p>
           <ol className="list-decimal list-inside space-y-0.5">
-            <li>Settings → Printers → SpeedX 400 → Printing Preferences</li>
-            <li>Paper Size: 80 × 297mm or 80mm Receipt, Portrait</li>
+            <li>POS58 Advanced Options → Paper: 48mm × 3276mm (203dpi)</li>
             <li>Margins: 0mm on all sides</li>
             <li>Print Density: 7–8 (default 5 is too faint)</li>
-            <li>Scaling: Actual size / 100% — not Fit to page</li>
+            <li>Scaling: Actual size / 100% / noscale — not Fit to page</li>
           </ol>
         </div>
       )}
