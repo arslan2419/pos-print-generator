@@ -10,6 +10,7 @@ export function loadPersistedStation() {
       fuelStationAddress: data.fuelStationAddress ?? '',
       logoDataUrl: data.logoDataUrl ?? null,
       paymentMethod: data.paymentMethod ?? 'Cash',
+      paperSize: data.paperSize ?? 58,
     };
   } catch {
     return null;
@@ -21,6 +22,7 @@ export function savePersistedStation({
   fuelStationAddress,
   logoDataUrl,
   paymentMethod,
+  paperSize,
 }) {
   try {
     localStorage.setItem(
@@ -30,6 +32,7 @@ export function savePersistedStation({
         fuelStationAddress,
         logoDataUrl,
         paymentMethod,
+        paperSize,
       })
     );
   } catch {
