@@ -128,8 +128,8 @@ function measureReceiptHeight(formData, measureDoc, logoLayout) {
 
   if (logoLayout) h += logoLayout.blockHeight;
 
-  doc.setFont('courier', 'bold');
-  doc.setFontSize(FONT.station);
+  measureDoc.setFont('courier', 'bold');
+  measureDoc.setFontSize(FONT.station);
   const nameLines = measureWrappedLines(
     measureDoc,
     (formData.fuelStationName || '').toUpperCase(),
