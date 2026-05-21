@@ -1,5 +1,43 @@
 import { jsPDF } from 'jspdf';
 
+/** SpeedX 400 — 80mm thermal roll (6mm safe margins, 68mm content) */
+const PROFILE = {
+  pageWidth: 80,
+  margin: 6,
+  contentWidth: 68,
+  font: {
+    station: 12,
+    address: 8,
+    heading: 11,
+    row: 9,
+    total: 10,
+    footer: 7,
+  },
+  lineHeight: 5,
+  gapAfterBar: 4,
+  gapAfterLogo: 3,
+  logoWidth: 20,
+  logoMaxHeight: 20,
+  dashLineWidth: 0.4,
+  dashPattern: [1.5, 1],
+  bottomMargin: 10,
+  startY: 8,
+};
+
+const LABELS = {
+  receiptNo: 'RECEIPT NO:',
+  date: 'DATE:',
+  time: 'TIME:',
+  payment: 'PAYMENT:',
+  nozzleNo: 'NOZZLE NO:',
+  product: 'PRODUCT:',
+  volume: 'VOLUME:',
+  rateLtr: 'RATE/LTR:',
+  totalAmount: 'TOTAL AMOUNT:',
+  vehicleNo: 'VEHICLE NO:',
+  customerName: 'CUSTOMER NAME:',
+};
+
 const MONTHS = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
@@ -26,89 +64,38 @@ export function formatPaymentMethod(method) {
   return method.toUpperCase();
 }
 
-function normalizePaperSize(paperSize) {
-  return Number(paperSize) === 58 ? 58 : 80;
-}
-
-function getProfile(paperSize) {
-  const is58 = normalizePaperSize(paperSize) === 58;
-  return {
-    is58,
-    pageWidth: is58 ? 58 : 80,
-    margin: is58 ? 3 : 5,
-    font: {
-      station: is58 ? 10 : 12,
-      address: is58 ? 7 : 9,
-      heading: is58 ? 9 : 11,
-      row: is58 ? 7 : 9,
-      total: is58 ? 8 : 10,
-      footer: is58 ? 6 : 8,
-    },
-    lineHeight: is58 ? 4 : 5,
-    /** Space below each dashed bar before the next text row (baseline clearance) */
-    gapAfterBar: is58 ? 3.5 : 4,
-    logoWidth: is58 ? 16 : 22,
-    gapAfterLogo: is58 ? 2 : 3,
-    dashLineWidth: is58 ? 0.3 : 0.2,
-    bottomMargin: 6,
-    startY: 5,
-  };
-}
-
-function getLabels(is58) {
-  if (is58) {
-    return {
-      receiptNo: 'RCPT NO:',
-      date: 'DATE:',
-      time: 'TIME:',
-      payment: 'PAYMENT:',
-      nozzleNo: 'NOZZLE:',
-      product: 'PRODUCT:',
-      volume: 'VOLUME:',
-      rateLtr: 'RATE/LTR:',
-      totalAmount: 'TOTAL:',
-      vehicleNo: 'VEHICLE:',
-      customerName: 'CUSTOMER:',
-    };
-  }
-  return {
-    receiptNo: 'RECEIPT NO:',
-    date: 'DATE:',
-    time: 'TIME:',
-    payment: 'PAYMENT:',
-    nozzleNo: 'NOZZLE NO:',
-    product: 'PRODUCT:',
-    volume: 'VOLUME:',
-    rateLtr: 'RATE/LTR:',
-    totalAmount: 'TOTAL AMOUNT:',
-    vehicleNo: 'VEHICLE NO:',
-    customerName: 'CUSTOMER NAME:',
-  };
-}
-
 function getImageFormat(dataUrl) {
   if (dataUrl.includes('image/png')) return 'PNG';
   if (dataUrl.includes('image/jpeg') || dataUrl.includes('image/jpg')) return 'JPEG';
   return null;
 }
 
-function getLogoLayout(doc, dataUrl, profile) {
+function getLogoLayout(doc, dataUrl) {
   try {
     const { width, height } = doc.getImageProperties(dataUrl);
-    const heightMm = (profile.logoWidth * height) / width;
+    let widthMm = PROFILE.logoWidth;
+    let heightMm = (widthMm * height) / width;
+
+    if (heightMm > PROFILE.logoMaxHeight) {
+      heightMm = PROFILE.logoMaxHeight;
+      widthMm = (heightMm * width) / height;
+    }
+
     return {
+      widthMm,
       heightMm,
-      blockHeight: heightMm + profile.gapAfterLogo,
+      blockHeight: heightMm + PROFILE.gapAfterLogo,
     };
   } catch {
     return null;
   }
 }
 
-function drawDashedLine(doc, profile, y, nextFontSize = profile.font.row) {
-  const { margin, pageWidth, dashLineWidth, gapAfterBar, font } = profile;
-  doc.setLineDash([1, 1], 0);
-  doc.setDrawColor(0);
+function drawDashedLine(doc, y, nextFontSize = PROFILE.font.row) {
+  const { margin, pageWidth, dashLineWidth, dashPattern, gapAfterBar, font } =
+    PROFILE;
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineDash(dashPattern, 0);
   doc.setLineWidth(dashLineWidth);
   doc.line(margin, y, pageWidth - margin, y);
   doc.setLineDash([], 0);
@@ -116,8 +103,8 @@ function drawDashedLine(doc, profile, y, nextFontSize = profile.font.row) {
   return y + gapAfterBar + extra;
 }
 
-function drawLabelValue(doc, profile, y, label, value, fontSize, bold = false) {
-  const { margin, pageWidth, lineHeight } = profile;
+function drawLabelValue(doc, y, label, value, fontSize, bold = false) {
+  const { margin, pageWidth, lineHeight } = PROFILE;
   doc.setFont('courier', bold ? 'bold' : 'normal');
   doc.setFontSize(fontSize);
   doc.text(label, margin, y);
@@ -125,105 +112,87 @@ function drawLabelValue(doc, profile, y, label, value, fontSize, bold = false) {
   return y + lineHeight;
 }
 
-function measureAddressHeight(doc, address, contentWidth, fontSize, lineHeight) {
+function measureAddressHeight(doc, address) {
   doc.setFont('courier', 'normal');
-  doc.setFontSize(fontSize);
-  const lines = doc.splitTextToSize(address || '', contentWidth);
-  return lines.length * (lineHeight - 1);
+  doc.setFontSize(PROFILE.font.address);
+  const lines = doc.splitTextToSize(address || '', PROFILE.contentWidth);
+  return lines.length * (PROFILE.lineHeight - 1);
 }
 
 function countPaymentRows(formData) {
-  let rows = 4; // receipt, date, time, nozzle
+  let rows = 4;
   if (formatPaymentMethod(formData.paymentMethod)) rows += 1;
   return rows;
 }
 
-function measureReceiptHeight(formData, measureDoc, profile, logoLayout) {
-  const contentWidth = profile.pageWidth - profile.margin * 2;
+function measureReceiptHeight(formData, measureDoc, logoLayout) {
+  let y = PROFILE.startY;
 
-  let y = profile.startY;
+  if (logoLayout) y += logoLayout.blockHeight;
 
-  if (logoLayout) {
-    y += logoLayout.blockHeight;
-  }
-
-  y += profile.lineHeight; // station name
-  y += measureAddressHeight(
-    measureDoc,
-    formData.fuelStationAddress,
-    contentWidth,
-    profile.font.address,
-    profile.lineHeight
-  );
+  y += PROFILE.lineHeight;
+  y += measureAddressHeight(measureDoc, formData.fuelStationAddress);
   y += 1;
-  y += profile.lineHeight; // FUEL RECEIPT
-  y += profile.gapAfterBar;
-  y += profile.lineHeight * countPaymentRows(formData);
-  y += profile.gapAfterBar;
-  y += profile.lineHeight * 3; // product, volume, rate
-  y += profile.gapAfterBar + 0.5; // total row uses larger font
-  y += profile.lineHeight; // total
-  y += profile.gapAfterBar;
-  y += profile.lineHeight * 2; // vehicle, customer
-  y += profile.gapAfterBar;
-  y += profile.lineHeight * 3; // footer
+  y += PROFILE.lineHeight;
+  y += PROFILE.gapAfterBar;
+  y += PROFILE.lineHeight * countPaymentRows(formData);
+  y += PROFILE.gapAfterBar;
+  y += PROFILE.lineHeight * 3;
+  y += PROFILE.gapAfterBar + 0.5;
+  y += PROFILE.lineHeight;
+  y += PROFILE.gapAfterBar;
+  y += PROFILE.lineHeight * 2;
+  y += PROFILE.gapAfterBar;
+  y += PROFILE.lineHeight * 3;
 
-  return y + profile.bottomMargin;
+  return y + PROFILE.bottomMargin + 1;
 }
 
-function wrapCenteredText(doc, profile, text, y, fontSize) {
-  const contentWidth = profile.pageWidth - profile.margin * 2;
+function wrapCenteredText(doc, text, y, fontSize) {
   doc.setFont('courier', 'normal');
   doc.setFontSize(fontSize);
-  const lines = doc.splitTextToSize(text, contentWidth);
+  const lines = doc.splitTextToSize(text, PROFILE.contentWidth);
   lines.forEach((line) => {
-    doc.text(line, profile.pageWidth / 2, y, { align: 'center' });
-    y += profile.lineHeight - 1;
+    doc.text(line, PROFILE.pageWidth / 2, y, { align: 'center' });
+    y += PROFILE.lineHeight - 1;
   });
   return y;
 }
 
 export function generatePDF(formData, totalAmount) {
-  const profile = getProfile(formData.paperSize);
-  const labels = getLabels(profile.is58);
   const productLabel = (formData.productType || 'Petrol').toUpperCase();
 
   const measureDoc = new jsPDF({
     unit: 'mm',
-    format: [profile.pageWidth, 50],
+    format: [PROFILE.pageWidth, 50],
   });
 
   const logoFormat =
     formData.logoDataUrl && getImageFormat(formData.logoDataUrl);
   const logoLayout = logoFormat
-    ? getLogoLayout(measureDoc, formData.logoDataUrl, profile)
+    ? getLogoLayout(measureDoc, formData.logoDataUrl)
     : null;
 
-  const pageHeight = measureReceiptHeight(
-    formData,
-    measureDoc,
-    profile,
-    logoLayout
-  );
+  const pageHeight = measureReceiptHeight(formData, measureDoc, logoLayout);
 
   const doc = new jsPDF({
     unit: 'mm',
-    format: [profile.pageWidth, pageHeight],
+    format: [PROFILE.pageWidth, pageHeight],
   });
 
   doc.setFont('courier');
   doc.setTextColor(0, 0, 0);
 
-  let y = profile.startY;
+  let y = PROFILE.startY;
 
   if (logoLayout && logoFormat) {
     try {
       doc.addImage(
         formData.logoDataUrl,
         logoFormat,
-        (profile.pageWidth - profile.logoWidth) / 2,
+        (PROFILE.pageWidth - logoLayout.widthMm) / 2,
         y,
-        profile.logoWidth,
+        logoLayout.widthMm,
         logoLayout.heightMm
       );
       y += logoLayout.blockHeight;
@@ -233,149 +202,118 @@ export function generatePDF(formData, totalAmount) {
   }
 
   doc.setFont('courier', 'bold');
-  doc.setFontSize(profile.font.station);
+  doc.setFontSize(PROFILE.font.station);
   doc.text(
     (formData.fuelStationName || '').toUpperCase(),
-    profile.pageWidth / 2,
+    PROFILE.pageWidth / 2,
     y,
-    { align: 'center' }
+    { align: 'center', maxWidth: PROFILE.contentWidth }
   );
-  y += profile.lineHeight;
+  y += PROFILE.lineHeight;
 
   y = wrapCenteredText(
     doc,
-    profile,
     formData.fuelStationAddress || '',
     y,
-    profile.font.address
+    PROFILE.font.address
   );
   y += 1;
 
   doc.setFont('courier', 'bold');
-  doc.setFontSize(profile.font.heading);
-  doc.text('FUEL RECEIPT', profile.pageWidth / 2, y, { align: 'center' });
-  y += profile.lineHeight;
+  doc.setFontSize(PROFILE.font.heading);
+  doc.text('FUEL RECEIPT', PROFILE.pageWidth / 2, y, { align: 'center' });
+  y += PROFILE.lineHeight;
 
-  y = drawDashedLine(doc, profile, y, profile.font.row);
+  y = drawDashedLine(doc, y, PROFILE.font.row);
 
   y = drawLabelValue(
     doc,
-    profile,
     y,
-    labels.receiptNo,
+    LABELS.receiptNo,
     formData.invoiceNumber,
-    profile.font.row
+    PROFILE.font.row
   );
   y = drawLabelValue(
     doc,
-    profile,
     y,
-    labels.date,
+    LABELS.date,
     formatReceiptDate(formData.fuelBillDate),
-    profile.font.row
+    PROFILE.font.row
   );
   y = drawLabelValue(
     doc,
-    profile,
     y,
-    labels.time,
+    LABELS.time,
     formatReceiptTime(formData.fuelBillTime),
-    profile.font.row
+    PROFILE.font.row
   );
   const paymentLabel = formatPaymentMethod(formData.paymentMethod);
   if (paymentLabel) {
-    y = drawLabelValue(
-      doc,
-      profile,
-      y,
-      labels.payment,
-      paymentLabel,
-      profile.font.row
-    );
+    y = drawLabelValue(doc, y, LABELS.payment, paymentLabel, PROFILE.font.row);
   }
+  y = drawLabelValue(doc, y, LABELS.nozzleNo, formData.nozzleNo, PROFILE.font.row);
+
+  y = drawDashedLine(doc, y, PROFILE.font.row);
+
+  y = drawLabelValue(doc, y, LABELS.product, productLabel, PROFILE.font.row);
   y = drawLabelValue(
     doc,
-    profile,
     y,
-    labels.nozzleNo,
-    formData.nozzleNo,
-    profile.font.row
-  );
-
-  y = drawDashedLine(doc, profile, y, profile.font.row);
-
-  y = drawLabelValue(doc, profile, y, labels.product, productLabel, profile.font.row);
-  y = drawLabelValue(
-    doc,
-    profile,
-    y,
-    labels.volume,
+    LABELS.volume,
     `${formData.volume} LTR`,
-    profile.font.row
+    PROFILE.font.row
   );
   y = drawLabelValue(
     doc,
-    profile,
     y,
-    labels.rateLtr,
+    LABELS.rateLtr,
     `Rs. ${formData.fuelRate}`,
-    profile.font.row
+    PROFILE.font.row
   );
 
-  y = drawDashedLine(doc, profile, y, profile.font.total);
+  y = drawDashedLine(doc, y, PROFILE.font.total);
 
   y = drawLabelValue(
     doc,
-    profile,
     y,
-    labels.totalAmount,
+    LABELS.totalAmount,
     `Rs. ${Number(totalAmount).toFixed(2)}`,
-    profile.font.total,
+    PROFILE.font.total,
     true
   );
 
-  y = drawDashedLine(doc, profile, y, profile.font.row);
+  y = drawDashedLine(doc, y, PROFILE.font.row);
 
   y = drawLabelValue(
     doc,
-    profile,
     y,
-    labels.vehicleNo,
+    LABELS.vehicleNo,
     formData.vehicleNumber,
-    profile.font.row
+    PROFILE.font.row
   );
   y = drawLabelValue(
     doc,
-    profile,
     y,
-    labels.customerName,
+    LABELS.customerName,
     formData.customerName,
-    profile.font.row
+    PROFILE.font.row
   );
 
-  y = drawDashedLine(doc, profile, y, profile.font.footer);
+  y = drawDashedLine(doc, y, PROFILE.font.footer);
+  y += 1;
 
   doc.setFont('courier', 'normal');
-  doc.setFontSize(profile.font.footer);
-  const footerLines = profile.is58
-    ? [
-        'POWERED BY TRISON',
-        'THANKS FOR FUELLING WITH US',
-        'VISIT AGAIN',
-      ]
-    : [
-        'POWERED BY TRISON',
-        'THANKS FOR FUELLING WITH US',
-        'VISIT AGAIN - 0303376453937',
-      ];
-
-  footerLines.forEach((line) => {
-    doc.text(line, profile.pageWidth / 2, y, { align: 'center' });
-    y += profile.lineHeight - 1;
+  doc.setFontSize(PROFILE.font.footer);
+  [
+    'POWERED BY TRISON',
+    'THANKS FOR FUELLING WITH US',
+    'VISIT AGAIN - 0303376453937',
+  ].forEach((line) => {
+    doc.text(line, PROFILE.pageWidth / 2, y, { align: 'center' });
+    y += PROFILE.lineHeight - 1;
   });
 
-  const suffix = profile.is58 ? '58mm' : '80mm';
-  const filename = `fuel-receipt-${formData.invoiceNumber}-${suffix}.pdf`;
+  const filename = `fuel-receipt-${formData.invoiceNumber}.pdf`;
   doc.save(filename);
 
   return filename;

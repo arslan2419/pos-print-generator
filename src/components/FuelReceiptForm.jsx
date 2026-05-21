@@ -13,7 +13,7 @@ import SelectField from './SelectField';
 import TextAreaField from './TextAreaField';
 import LogoUploader from './LogoUploader';
 import Toast from './Toast';
-import PaperSizeSelector from './PaperSizeSelector';
+import PrinterSetupGuide from './PrinterSetupGuide';
 import useFormState from '../hooks/useFormState';
 import { generatePDF } from '../utils/generatePDF';
 
@@ -249,12 +249,7 @@ export default function FuelReceiptForm() {
           />
         </FormSection>
 
-        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-          <PaperSizeSelector
-            value={form.paperSize}
-            onChange={(size) => updateField('paperSize', size)}
-          />
-        </div>
+        <PrinterSetupGuide />
 
         <button
           type="submit"
