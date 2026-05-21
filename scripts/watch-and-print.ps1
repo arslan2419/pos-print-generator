@@ -1,5 +1,5 @@
 # Watches a folder for new PDF receipts and prints them on the office thermal printer.
-# Use noscale so 58mm/80mm PDFs map 1:1 to paper (no fit-to-page shrinking).
+# Use noscale so 80mm PDFs map 1:1 to paper (no fit-to-page shrinking).
 
 param(
     [string]$WatchFolder = "$env:USERPROFILE\Downloads",

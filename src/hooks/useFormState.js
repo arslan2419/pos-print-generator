@@ -6,7 +6,6 @@ const PERSISTED_FIELDS = new Set([
   'fuelStationAddress',
   'logoDataUrl',
   'paymentMethod',
-  'paperSize',
 ]);
 
 function randomInvoice() {
@@ -40,7 +39,6 @@ function createInitialForm() {
     nozzleNo: '',
     customerName: '',
     logoDataUrl: persisted?.logoDataUrl ?? null,
-    paperSize: persisted?.paperSize ?? 58,
   };
 }
 
@@ -50,7 +48,6 @@ function persistStationFields(form) {
     fuelStationAddress: form.fuelStationAddress,
     logoDataUrl: form.logoDataUrl,
     paymentMethod: form.paymentMethod,
-    paperSize: form.paperSize,
   });
 }
 

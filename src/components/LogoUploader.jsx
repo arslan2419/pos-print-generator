@@ -61,6 +61,9 @@ export default function LogoUploader({ logoDataUrl, onLogoChange, error }) {
           <p className="text-xs text-[#6B7280] text-center">
             or drag and drop PNG, JPG, SVG (max 2MB)
           </p>
+          <p className="text-xs text-[#6B7280] text-center mt-1">
+            For best thermal print, use a simple black &amp; white logo.
+          </p>
         </div>
         <input
           ref={inputRef}
